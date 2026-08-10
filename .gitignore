@@ -31,3 +31,17 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Environment variables
+.env
+.env.*

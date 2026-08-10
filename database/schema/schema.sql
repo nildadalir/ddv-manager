@@ -67,14 +67,32 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
 -- ==========================================
 -- PLAYER DATA
 -- ==========================================
+CREATE TABLE IF NOT EXISTS players (
+    player_id INTEGER PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS player_characters (
     player_character_id INTEGER PRIMARY KEY,
-    character_id INTEGER,
+
+    player_id INTEGER NOT NULL,
+    character_id INTEGER NOT NULL,
+
     unlocked BOOLEAN DEFAULT FALSE,
     friendship_level INTEGER DEFAULT 0,
     assigned_role INTEGER,
-    FOREIGN KEY(character_id) REFERENCES characters(character_id),
-    FOREIGN KEY(assigned_role) REFERENCES roles(role_id)
+
+    FOREIGN KEY(player_id)
+        REFERENCES players(player_id),
+
+    FOREIGN KEY(character_id)
+        REFERENCES characters(character_id),
+
+    FOREIGN KEY(assigned_role)
+        REFERENCES roles(role_id),
+
+    UNIQUE(player_id, character_id)
 );
 CREATE TABLE IF NOT EXISTS storage_containers (
     storage_id INTEGER PRIMARY KEY,
