@@ -87,6 +87,7 @@ class Role(Base):
         back_populates="role"
     )
 
+
 class ItemCategory(Base):
     __tablename__ = "item_categories"
 
@@ -104,6 +105,7 @@ class ItemCategory(Base):
     items: Mapped[list["Item"]] = relationship(
         back_populates="category"
     )
+
 
 class Item(Base):
     __tablename__ = "items"
@@ -132,6 +134,65 @@ class Item(Base):
     category: Mapped["ItemCategory | None"] = relationship(
         back_populates="items"
     )
+
+    recipe_links: Mapped[list["RecipeIngredient"]] = relationship(
+        back_populates="item"
+    )
+
+
+class Recipe(Base):
+    __tablename__ = "recipes"
+
+    recipe_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    category: Mapped[str | None]
+
+    stars: Mapped[int | None]
+
+    energy: Mapped[int | None]
+
+    sell_price: Mapped[int | None]
+
+    ingredients: Mapped[list["RecipeIngredient"]] = relationship(
+        back_populates="recipe"
+    )
+
+
+class RecipeIngredient(Base):
+    __tablename__ = "recipe_ingredients"
+
+    recipe_id: Mapped[int] = mapped_column(
+        ForeignKey("recipes.recipe_id"),
+        primary_key=True
+    )
+
+    item_id: Mapped[int] = mapped_column(
+        ForeignKey("items.item_id"),
+        primary_key=True
+    )
+
+    quantity: Mapped[int] = mapped_column(
+        Integer,
+        default=1
+    )
+
+    recipe: Mapped["Recipe"] = relationship(
+        back_populates="ingredients"
+    )
+
+    item: Mapped["Item"] = relationship(
+        back_populates="recipe_links"
+    )
+
 
 class Player(Base):
     __tablename__ = "players"
