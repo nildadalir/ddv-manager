@@ -19,6 +19,12 @@ class Franchise(Base):
         primary_key=True
     )
 
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
@@ -36,6 +42,12 @@ class Character(Base):
     character_id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
     )
 
     name: Mapped[str] = mapped_column(
@@ -77,6 +89,12 @@ class Role(Base):
         primary_key=True
     )
 
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
@@ -115,6 +133,12 @@ class Item(Base):
         primary_key=True
     )
 
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
@@ -146,6 +170,12 @@ class Recipe(Base):
     recipe_id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
     )
 
     name: Mapped[str] = mapped_column(
@@ -192,6 +222,25 @@ class RecipeIngredient(Base):
     item: Mapped["Item"] = relationship(
         back_populates="recipe_links"
     )
+
+
+class DataSource(Base):
+    __tablename__ = "data_sources"
+
+    source_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    url: Mapped[str | None]
+
+    last_sync: Mapped[str | None]
 
 
 class Player(Base):
