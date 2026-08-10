@@ -87,6 +87,51 @@ class Role(Base):
         back_populates="role"
     )
 
+class ItemCategory(Base):
+    __tablename__ = "item_categories"
+
+    category_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    items: Mapped[list["Item"]] = relationship(
+        back_populates="category"
+    )
+
+class Item(Base):
+    __tablename__ = "items"
+
+    item_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    category_id: Mapped[int | None] = mapped_column(
+        ForeignKey("item_categories.category_id")
+    )
+
+    rarity: Mapped[str | None]
+
+    sell_price: Mapped[int | None]
+
+    energy: Mapped[int | None]
+
+    category: Mapped["ItemCategory | None"] = relationship(
+        back_populates="items"
+    )
 
 class Player(Base):
     __tablename__ = "players"
