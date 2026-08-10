@@ -1,18 +1,18 @@
 from database.connection import SessionLocal
-from database.models import Character
+from database.models import PlayerCharacter
 
 
 def main():
 
     session = SessionLocal()
 
-    characters = session.query(Character).all()
+    progress = session.query(PlayerCharacter).first()
 
-    for character in characters:
-        print(
-            character.name,
-            character.species
-        )
+    print("Character:", progress.character.name)
+    print("Franchise:", progress.character.franchise.name)
+    print("Friendship:", progress.friendship_level)
+    print("Role:", progress.role.name)
+    print("Player:", progress.player.username)
 
     session.close()
 
