@@ -3,9 +3,7 @@ import sqlite3
 
 from database.connection import DATABASE_PATH
 
-
 MIGRATIONS_DIR = Path("database") / "migrations"
-
 
 def create_database():
 
