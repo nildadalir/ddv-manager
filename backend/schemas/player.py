@@ -18,3 +18,8 @@ class PlayerCharacterCreate(BaseModel):
     unlocked: bool = True
     friendship_level: int = 0
     role_id: int | None = None
+    
+class PlayerCharacterUpdate(BaseModel):
+    unlocked: bool | None
+    friendship_level: int | None
+    role_id: int | None

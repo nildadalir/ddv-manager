@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends
-from fastapi import HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
@@ -12,6 +11,7 @@ from backend.schemas.player import (
     PlayerResponse,
     PlayerCharacterResponse,
     PlayerCharacterCreate,
+    PlayerCharacterUpdate,
 )
 
 
@@ -25,7 +25,6 @@ router = APIRouter(
 def get_players(
     db: Session = Depends(get_database)
 ):
-
     players = db.query(Player).all()
 
     return [
@@ -51,7 +50,6 @@ def add_character(
     data: PlayerCharacterCreate,
     db: Session = Depends(get_database)
 ):
-
     existing = db.query(PlayerCharacter).filter(
         PlayerCharacter.player_id == player_id,
         PlayerCharacter.character_id == data.character_id
@@ -78,4 +76,52 @@ def add_character(
     return {
         "message": "Character added",
         "character_id": player_character.character_id
+    }
+
+
+@router.patch("/{player_id}/characters/{character_id}")
+def update_character(
+    player_id: int,
+    character_id: int,
+    data: PlayerCharacterUpdate,
+    db: Session = Depends(get_database)
+):
+    print("PATCH DATA:", data.model_dump())
+
+    player_character = db.query(PlayerCharacter).filter(
+        PlayerCharacter.player_id == player_id,
+        PlayerCharacter.character_id == character_id
+    ).first()
+
+    if not player_character:
+        raise HTTPException(
+            status_code=404,
+            detail="Character not found for this player"
+        )
+
+    if data.unlocked is not None:
+        player_character.unlocked = data.unlocked
+
+    if data.friendship_level is not None:
+        player_character.friendship_level = data.friendship_level
+
+    if data.role_id is not None:
+        player_character.assigned_role = data.role_id
+
+    print(
+        "BEFORE COMMIT:",
+        player_character.assigned_role,
+        player_character.friendship_level,
+        player_character.unlocked
+    )
+
+    db.commit()
+    db.refresh(player_character)
+
+    return {
+        "message": "Character updated",
+        "character_id": player_character.character_id,
+        "unlocked": player_character.unlocked,
+        "friendship_level": player_character.friendship_level,
+        "role_id": player_character.assigned_role
     }
