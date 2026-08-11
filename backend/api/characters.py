@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
 from backend.database.models import Character, Franchise
+from backend.schemas.character import CharacterResponse
 
 
 router = APIRouter(
@@ -11,7 +12,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get("/", response_model=list[CharacterResponse])
 def get_characters(
     db: Session = Depends(get_database)
 ):
@@ -23,10 +24,10 @@ def get_characters(
     )
 
     return [
-        {
-            "name": character.name,
-            "species": character.species,
-            "franchise": character.franchise.name
-        }
-        for character in characters
-    ]
+    CharacterResponse(
+        name=character.name,
+        species=character.species,
+        franchise=character.franchise.name
+    )
+    for character in characters
+]

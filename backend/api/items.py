@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
 from backend.database.models import Item, ItemCategory
+from backend.schemas.item import ItemResponse
 
 
 router = APIRouter(
@@ -11,7 +12,7 @@ router = APIRouter(
 )
 
 
-@router.get("/")
+@router.get("/", response_model=list[ItemResponse])
 def get_items(
     db: Session = Depends(get_database)
 ):
@@ -23,12 +24,11 @@ def get_items(
     )
 
     return [
-        {
-            "name": item.name,
-            "category": item.category.name,
-            "rarity": item.rarity,
-            "sell_price": item.sell_price
-        }
-        for item in items
-    ]
-    
+    ItemResponse(
+        name=item.name,
+        category=item.category.name if item.category else None,
+        rarity=item.rarity,
+        sell_price=item.sell_price
+    )
+    for item in items
+]
