@@ -213,3 +213,29 @@ def update_character(
         "friendship_level": player_character.friendship_level,
         "role_id": player_character.assigned_role,
     }
+
+
+@router.delete("/{player_id}/characters/{character_id}")
+def remove_character(
+    player_id: int,
+    character_id: int,
+    db: Session = Depends(get_database),
+):
+    player_character = db.query(PlayerCharacter).filter(
+        PlayerCharacter.player_id == player_id,
+        PlayerCharacter.character_id == character_id,
+    ).first()
+
+    if not player_character:
+        raise HTTPException(
+            status_code=404,
+            detail="Character not found for this player",
+        )
+
+    db.delete(player_character)
+    db.commit()
+
+    return {
+        "message": "Character removed",
+        "character_id": character_id,
+    }
