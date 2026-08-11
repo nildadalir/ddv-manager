@@ -11,3 +11,10 @@ class PlayerCharacterResponse(BaseModel):
 class PlayerResponse(BaseModel):
     username: str
     characters: list[PlayerCharacterResponse]
+
+
+class PlayerCharacterCreate(BaseModel):
+    character_id: int
+    unlocked: bool = True
+    friendship_level: int = 0
+    role_id: int | None = None

@@ -1,12 +1,17 @@
 from fastapi import APIRouter, Depends
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
-from backend.database.models import Player
+from backend.database.models import (
+    Player,
+    PlayerCharacter,
+)
 
 from backend.schemas.player import (
     PlayerResponse,
-    PlayerCharacterResponse
+    PlayerCharacterResponse,
+    PlayerCharacterCreate,
 )
 
 
@@ -38,3 +43,39 @@ def get_players(
         )
         for player in players
     ]
+
+
+@router.post("/{player_id}/characters")
+def add_character(
+    player_id: int,
+    data: PlayerCharacterCreate,
+    db: Session = Depends(get_database)
+):
+
+    existing = db.query(PlayerCharacter).filter(
+        PlayerCharacter.player_id == player_id,
+        PlayerCharacter.character_id == data.character_id
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Character already added to player"
+        )
+
+    player_character = PlayerCharacter(
+        player_id=player_id,
+        character_id=data.character_id,
+        unlocked=data.unlocked,
+        friendship_level=data.friendship_level,
+        assigned_role=data.role_id
+    )
+
+    db.add(player_character)
+    db.commit()
+    db.refresh(player_character)
+
+    return {
+        "message": "Character added",
+        "character_id": player_character.character_id
+    }
