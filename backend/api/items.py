@@ -12,6 +12,15 @@ router = APIRouter(
 )
 
 
+def build_item_response(item: Item) -> ItemResponse:
+    return ItemResponse(
+        name=item.name,
+        category=item.category.name if item.category else None,
+        rarity=item.rarity,
+        sell_price=item.sell_price,
+    )
+
+
 @router.get("/", response_model=list[ItemResponse])
 def get_items(
     db: Session = Depends(get_database),
@@ -23,12 +32,22 @@ def get_items(
     )
 
     return [
-        ItemResponse(
-            name=item.name,
-            category=item.category.name if item.category else None,
-            rarity=item.rarity,
-            sell_price=item.sell_price,
-        )
+        build_item_response(item)
+        for item in items
+    ]
+
+
+@router.get("/search", response_model=list[ItemResponse])
+def search_items(
+    name: str,
+    db: Session = Depends(get_database),
+):
+    items = db.query(Item).filter(
+        Item.name.ilike(f"%{name}%")
+    ).all()
+
+    return [
+        build_item_response(item)
         for item in items
     ]
 
