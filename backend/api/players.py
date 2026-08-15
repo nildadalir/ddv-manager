@@ -13,6 +13,7 @@ from backend.schemas.player import (
     PlayerCharacterResponse,
     PlayerCharacterCreate,
     PlayerCharacterUpdate,
+    PlayerSummaryResponse,
 )
 
 
@@ -45,13 +46,11 @@ def get_players(
     ]
 
 
-@router.post("/{player_id}/characters")
-def add_character(
+@router.get("/{player_id}/summary", response_model=PlayerSummaryResponse)
+def get_player_summary(
     player_id: int,
-    data: PlayerCharacterCreate,
     db: Session = Depends(get_database),
 ):
-    # Check player exists
     player = db.query(Player).filter(
         Player.player_id == player_id
     ).first()
@@ -62,7 +61,67 @@ def add_character(
             detail="Player not found",
         )
 
-    # Check character exists
+    characters = player.characters
+
+    unlocked_count = sum(
+        1 for pc in characters if pc.unlocked
+    )
+
+    max_friendship_count = sum(
+        1
+        for pc in characters
+        if pc.friendship_level >= pc.character.max_friendship_level
+    )
+
+    assigned_roles = [
+        {
+            "character": pc.character.name,
+            "role": pc.role.name,
+        }
+        for pc in characters
+        if pc.role
+    ]
+
+    used_roles = {
+        pc.role.name
+        for pc in characters
+        if pc.role
+    }
+
+    all_roles = db.query(Role).all()
+
+    missing_roles = [
+        role.name
+        for role in all_roles
+        if role.name not in used_roles
+    ]
+
+    return PlayerSummaryResponse(
+        username=player.username,
+        total_characters=len(characters),
+        unlocked_characters=unlocked_count,
+        max_friendship_characters=max_friendship_count,
+        assigned_roles=assigned_roles,
+        missing_roles=missing_roles,
+    )
+
+
+@router.post("/{player_id}/characters")
+def add_character(
+    player_id: int,
+    data: PlayerCharacterCreate,
+    db: Session = Depends(get_database),
+):
+    player = db.query(Player).filter(
+        Player.player_id == player_id
+    ).first()
+
+    if not player:
+        raise HTTPException(
+            status_code=404,
+            detail="Player not found",
+        )
+
     character = db.query(Character).filter(
         Character.character_id == data.character_id
     ).first()
@@ -73,7 +132,6 @@ def add_character(
             detail="Character not found",
         )
 
-    # Check character isn't already added
     existing = db.query(PlayerCharacter).filter(
         PlayerCharacter.player_id == player_id,
         PlayerCharacter.character_id == data.character_id,
@@ -85,7 +143,6 @@ def add_character(
             detail="Character already added to player",
         )
 
-    # Validate friendship level
     if data.friendship_level < 0:
         raise HTTPException(
             status_code=400,
@@ -101,7 +158,6 @@ def add_character(
             ),
         )
 
-    # Validate role if provided
     if data.role_id is not None:
         role = db.query(Role).filter(
             Role.role_id == data.role_id
@@ -146,7 +202,6 @@ def update_character(
     data: PlayerCharacterUpdate,
     db: Session = Depends(get_database),
 ):
-    # Find player's character
     player_character = db.query(PlayerCharacter).filter(
         PlayerCharacter.player_id == player_id,
         PlayerCharacter.character_id == character_id,
@@ -158,8 +213,8 @@ def update_character(
             detail="Character not found for this player",
         )
 
-    # Validate friendship level if provided
     if data.friendship_level is not None:
+
         if data.friendship_level < 0:
             raise HTTPException(
                 status_code=400,
@@ -177,11 +232,9 @@ def update_character(
 
         player_character.friendship_level = data.friendship_level
 
-    # Update unlocked status if provided
     if data.unlocked is not None:
         player_character.unlocked = data.unlocked
 
-    # Validate and update role if provided
     if data.role_id is not None:
         role = db.query(Role).filter(
             Role.role_id == data.role_id

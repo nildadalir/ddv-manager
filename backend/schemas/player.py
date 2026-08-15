@@ -13,12 +13,22 @@ class PlayerResponse(BaseModel):
     characters: list[PlayerCharacterResponse]
 
 
+class PlayerSummaryResponse(BaseModel):
+    username: str
+    total_characters: int
+    unlocked_characters: int
+    max_friendship_characters: int
+    assigned_roles: list[dict]
+    missing_roles: list[str]
+
+
 class PlayerCharacterCreate(BaseModel):
     character_id: int
     unlocked: bool = True
     friendship_level: int = 0
     role_id: int | None = None
-    
+
+
 class PlayerCharacterUpdate(BaseModel):
     unlocked: bool | None = None
     friendship_level: int | None = None
