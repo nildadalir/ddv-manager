@@ -14,6 +14,7 @@ from backend.schemas.player import (
     PlayerCharacterCreate,
     PlayerCharacterUpdate,
     PlayerSummaryResponse,
+    PlayerRecommendationResponse,
 )
 
 
@@ -105,6 +106,64 @@ def get_player_summary(
         missing_roles=missing_roles,
     )
 
+@router.get(
+    "/{player_id}/recommendations",
+    response_model=list[PlayerRecommendationResponse],
+)
+def get_player_recommendations(
+    player_id: int,
+    db: Session = Depends(get_database),
+):
+    player = db.query(Player).filter(
+        Player.player_id == player_id
+    ).first()
+
+    if not player:
+        raise HTTPException(
+            status_code=404,
+            detail="Player not found",
+        )
+
+    recommendations = []
+
+    for pc in player.characters:
+
+        if pc.friendship_level < pc.character.max_friendship_level:
+            recommendations.append(
+                {
+                    "type": "friendship",
+                    "priority": "high",
+                    "character": pc.character.name,
+                    "reason": (
+                        f"Friendship level "
+                        f"{pc.friendship_level}/"
+                        f"{pc.character.max_friendship_level}"
+                    ),
+                }
+            )
+
+    assigned_roles = {
+        pc.role.name
+        for pc in player.characters
+        if pc.role
+    }
+
+    all_roles = db.query(Role).all()
+
+    for role in all_roles:
+        if role.name not in assigned_roles:
+            recommendations.append(
+                {
+                    "type": "role",
+                    "priority": "medium",
+                    "character": None,
+                    "reason": (
+                        f"No character assigned to {role.name}"
+                    ),
+                }
+            )
+
+    return recommendations
 
 @router.post("/{player_id}/characters")
 def add_character(

@@ -33,3 +33,9 @@ class PlayerCharacterUpdate(BaseModel):
     unlocked: bool | None = None
     friendship_level: int | None = None
     role_id: int | None = None
+    
+class PlayerRecommendationResponse(BaseModel):
+    type: str
+    priority: str
+    character: str | None = None
+    reason: str
