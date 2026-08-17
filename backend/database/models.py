@@ -1,4 +1,10 @@
-from sqlalchemy import String, Integer, Boolean, ForeignKey
+from sqlalchemy import (
+    String,
+    Integer,
+    Boolean,
+    ForeignKey,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -103,6 +109,51 @@ class Role(Base):
 
     player_characters: Mapped[list["PlayerCharacter"]] = relationship(
         back_populates="role"
+    )
+
+    player_preferences: Mapped[list["PlayerRolePreference"]] = relationship(
+        back_populates="role",
+        cascade="all, delete-orphan"
+    )
+    
+class PlayerRolePreference(Base):
+    __tablename__ = "player_role_preferences"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "role_id",
+            name="uq_player_role_preference"
+        ),
+    )
+
+    preference_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    player_id: Mapped[int] = mapped_column(
+        ForeignKey("players.player_id"),
+        nullable=False
+    )
+
+    role_id: Mapped[int] = mapped_column(
+        ForeignKey("roles.role_id"),
+        nullable=False
+    )
+
+    priority: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    player: Mapped["Player"] = relationship(
+        back_populates="role_preferences"
+    )
+
+    role: Mapped["Role"] = relationship(
+        back_populates="player_preferences"
     )
 
 
@@ -257,10 +308,14 @@ class Player(Base):
         unique=True
     )
 
-    created_at: Mapped[str | None]
-
     characters: Mapped[list["PlayerCharacter"]] = relationship(
-        back_populates="player"
+        back_populates="player",
+        cascade="all, delete-orphan"
+    )
+
+    role_preferences: Mapped[list["PlayerRolePreference"]] = relationship(
+        back_populates="player",
+        cascade="all, delete-orphan"
     )
 
 
