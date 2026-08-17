@@ -1,7 +1,7 @@
 from pathlib import Path
 import sqlite3
 
-from database.connection import DATABASE_PATH
+from backend.database.connection import DATABASE_PATH
 
 MIGRATIONS_DIR = Path("database") / "migrations"
 
