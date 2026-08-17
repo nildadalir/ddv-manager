@@ -126,21 +126,51 @@ def get_player_recommendations(
 
     recommendations = []
 
+    # ---------- Friendship recommendations ----------
     for pc in player.characters:
 
-        if pc.friendship_level < pc.character.max_friendship_level:
-            recommendations.append(
-                {
-                    "type": "friendship",
-                    "priority": "high",
-                    "character": pc.character.name,
-                    "reason": (
-                        f"Friendship level "
-                        f"{pc.friendship_level}/"
-                        f"{pc.character.max_friendship_level}"
-                    ),
-                }
-            )
+        if pc.friendship_level >= pc.character.max_friendship_level:
+            continue
+
+        remaining = (
+            pc.character.max_friendship_level
+            - pc.friendship_level
+        )
+
+        if remaining <= 2:
+            priority = "high"
+            score = 100 - remaining
+
+        elif remaining <= 6:
+            priority = "medium"
+            score = 60 - remaining
+
+        else:
+            priority = "low"
+            score = 20 - remaining
+
+        recommendations.append(
+            {
+                "type": "friendship",
+                "priority": priority,
+                "character": pc.character.name,
+                "reason": (
+                    f"Friendship level "
+                    f"{pc.friendship_level}/"
+                    f"{pc.character.max_friendship_level}"
+                ),
+                "score": score,
+            }
+        )
+
+    # ---------- Missing role recommendations ----------
+    role_priority = {
+        "Gardening": ("high", 90),
+        "Mining": ("high", 85),
+        "Fishing": ("medium", 60),
+        "Foraging": ("medium", 55),
+        "Digging": ("low", 30),
+    }
 
     assigned_roles = {
         pc.role.name
@@ -148,20 +178,37 @@ def get_player_recommendations(
         if pc.role
     }
 
-    all_roles = db.query(Role).all()
+    for role in db.query(Role).all():
 
-    for role in all_roles:
-        if role.name not in assigned_roles:
-            recommendations.append(
-                {
-                    "type": "role",
-                    "priority": "medium",
-                    "character": None,
-                    "reason": (
-                        f"No character assigned to {role.name}"
-                    ),
-                }
-            )
+        if role.name in assigned_roles:
+            continue
+
+        priority, score = role_priority.get(
+            role.name,
+            ("medium", 50),
+        )
+
+        recommendations.append(
+            {
+                "type": "role",
+                "priority": priority,
+                "character": None,
+                "reason": (
+                    f"No character assigned to {role.name}"
+                ),
+                "score": score,
+            }
+        )
+
+    # ---------- Sort by score ----------
+    recommendations.sort(
+        key=lambda r: r["score"],
+        reverse=True,
+    )
+
+    # Remove internal score before returning
+    for recommendation in recommendations:
+        recommendation.pop("score")
 
     return recommendations
 

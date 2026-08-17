@@ -45,3 +45,5 @@ __pycache__/
 # Environment variables
 .env
 .env.*
+
+DDV_MANAGER_COMMANDS.md
