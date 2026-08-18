@@ -42,3 +42,6 @@ class PlayerRecommendationResponse(BaseModel):
     
 class PlayerPreferenceUpdate(BaseModel):
     friendship_strategy: str
+    
+class PlayerPreferenceUpdate(BaseModel):
+    friendship_strategy: str

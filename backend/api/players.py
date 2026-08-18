@@ -18,6 +18,11 @@ from backend.schemas.player import (
     PlayerCharacterUpdate,
     PlayerSummaryResponse,
     PlayerRecommendationResponse,
+    PlayerPreferenceUpdate,
+)
+
+from backend.services.recommendation import (
+    generate_player_recommendations,
 )
 
 
@@ -127,116 +132,54 @@ def get_player_recommendations(
             detail="Player not found",
         )
 
-    recommendations = []
-
-    # --------------------------------------------------
-    # Load player's role priorities
-    # --------------------------------------------------
-    role_preferences = db.query(PlayerRolePreference).filter(
-        PlayerRolePreference.player_id == player_id
-    ).all()
-
-    role_priority_map = {
-        preference.role_id: preference.priority
-        for preference in role_preferences
-    }
-
-    # --------------------------------------------------
-    # Friendship recommendations
-    # --------------------------------------------------
-    for pc in player.characters:
-
-        if pc.friendship_level >= pc.character.max_friendship_level:
-            continue
-
-        completion_percentage = (
-            pc.friendship_level
-            / pc.character.max_friendship_level
-        )
-
-        if completion_percentage >= 0.8:
-            priority = "high"
-        elif completion_percentage >= 0.4:
-            priority = "medium"
-        else:
-            priority = "low"
-
-        score = int(completion_percentage * 50)
-
-        recommendations.append(
-            {
-                "type": "friendship",
-                "priority": priority,
-                "character": pc.character.name,
-                "reason": (
-                    f"Friendship level "
-                    f"{pc.friendship_level}/"
-                    f"{pc.character.max_friendship_level}"
-                ),
-                "_score": score,
-            }
-        )
-
-    # --------------------------------------------------
-    # Missing role recommendations
-    # --------------------------------------------------
-    assigned_role_ids = {
-        pc.assigned_role
-        for pc in player.characters
-        if pc.assigned_role is not None
-    }
-
-    all_roles = db.query(Role).all()
-
-    for role in all_roles:
-
-        if role.role_id in assigned_role_ids:
-            continue
-
-        # Lower number = higher player priority.
-        # If no preference exists, place it after preferred roles.
-        role_priority = role_priority_map.get(
-            role.role_id,
-            len(all_roles) + 1,
-        )
-
-        if role_priority <= 2:
-            priority = "high"
-        elif role_priority <= 4:
-            priority = "medium"
-        else:
-            priority = "low"
-
-        score = max(
-            0,
-            100 - (role_priority * 10),
-        )
-
-        recommendations.append(
-            {
-                "type": "role",
-                "priority": priority,
-                "character": None,
-                "reason": (
-                    f"No character assigned to {role.name}"
-                ),
-                "_score": score,
-            }
-        )
-
-    # --------------------------------------------------
-    # Sort recommendations
-    # --------------------------------------------------
-    recommendations.sort(
-        key=lambda recommendation: recommendation["_score"],
-        reverse=True,
+    return generate_player_recommendations(
+        player_id,
+        player,
+        db,
     )
 
-    # Remove internal scoring field
-    for recommendation in recommendations:
-        recommendation.pop("_score")
+@router.patch("/{player_id}/preferences")
+def update_player_preferences(
+    player_id: int,
+    data: PlayerPreferenceUpdate,
+    db: Session = Depends(get_database),
+):
+    player = db.query(Player).filter(
+        Player.player_id == player_id
+    ).first()
 
-    return recommendations
+    if not player:
+        raise HTTPException(
+            status_code=404,
+            detail="Player not found",
+        )
+
+    allowed_strategies = {
+        "finish_closest",
+        "lowest_level",
+        "highest_level",
+        "balanced",
+        "custom",
+    }
+
+    if data.friendship_strategy not in allowed_strategies:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Invalid friendship strategy. "
+                f"Allowed values: {', '.join(allowed_strategies)}"
+            ),
+        )
+
+    player.friendship_strategy = data.friendship_strategy
+
+    db.commit()
+    db.refresh(player)
+
+    return {
+        "message": "Player preferences updated",
+        "friendship_strategy": player.friendship_strategy,
+    }
 
 @router.post("/{player_id}/characters")
 def add_character(
