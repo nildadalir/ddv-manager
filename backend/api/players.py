@@ -2,12 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
+
 from backend.database.models import (
     Player,
     PlayerCharacter,
     Character,
     Role,
+    PlayerRolePreference,
 )
+
 from backend.schemas.player import (
     PlayerResponse,
     PlayerCharacterResponse,
@@ -126,28 +129,39 @@ def get_player_recommendations(
 
     recommendations = []
 
-    # ---------- Friendship recommendations ----------
+    # --------------------------------------------------
+    # Load player's role priorities
+    # --------------------------------------------------
+    role_preferences = db.query(PlayerRolePreference).filter(
+        PlayerRolePreference.player_id == player_id
+    ).all()
+
+    role_priority_map = {
+        preference.role_id: preference.priority
+        for preference in role_preferences
+    }
+
+    # --------------------------------------------------
+    # Friendship recommendations
+    # --------------------------------------------------
     for pc in player.characters:
 
         if pc.friendship_level >= pc.character.max_friendship_level:
             continue
 
-        remaining = (
-            pc.character.max_friendship_level
-            - pc.friendship_level
+        completion_percentage = (
+            pc.friendship_level
+            / pc.character.max_friendship_level
         )
 
-        if remaining <= 2:
+        if completion_percentage >= 0.8:
             priority = "high"
-            score = 100 - remaining
-
-        elif remaining <= 6:
+        elif completion_percentage >= 0.4:
             priority = "medium"
-            score = 60 - remaining
-
         else:
             priority = "low"
-            score = 20 - remaining
+
+        score = int(completion_percentage * 50)
 
         recommendations.append(
             {
@@ -159,33 +173,43 @@ def get_player_recommendations(
                     f"{pc.friendship_level}/"
                     f"{pc.character.max_friendship_level}"
                 ),
-                "score": score,
+                "_score": score,
             }
         )
 
-    # ---------- Missing role recommendations ----------
-    role_priority = {
-        "Gardening": ("high", 90),
-        "Mining": ("high", 85),
-        "Fishing": ("medium", 60),
-        "Foraging": ("medium", 55),
-        "Digging": ("low", 30),
-    }
-
-    assigned_roles = {
-        pc.role.name
+    # --------------------------------------------------
+    # Missing role recommendations
+    # --------------------------------------------------
+    assigned_role_ids = {
+        pc.assigned_role
         for pc in player.characters
-        if pc.role
+        if pc.assigned_role is not None
     }
 
-    for role in db.query(Role).all():
+    all_roles = db.query(Role).all()
 
-        if role.name in assigned_roles:
+    for role in all_roles:
+
+        if role.role_id in assigned_role_ids:
             continue
 
-        priority, score = role_priority.get(
-            role.name,
-            ("medium", 50),
+        # Lower number = higher player priority.
+        # If no preference exists, place it after preferred roles.
+        role_priority = role_priority_map.get(
+            role.role_id,
+            len(all_roles) + 1,
+        )
+
+        if role_priority <= 2:
+            priority = "high"
+        elif role_priority <= 4:
+            priority = "medium"
+        else:
+            priority = "low"
+
+        score = max(
+            0,
+            100 - (role_priority * 10),
         )
 
         recommendations.append(
@@ -196,19 +220,21 @@ def get_player_recommendations(
                 "reason": (
                     f"No character assigned to {role.name}"
                 ),
-                "score": score,
+                "_score": score,
             }
         )
 
-    # ---------- Sort by score ----------
+    # --------------------------------------------------
+    # Sort recommendations
+    # --------------------------------------------------
     recommendations.sort(
-        key=lambda r: r["score"],
+        key=lambda recommendation: recommendation["_score"],
         reverse=True,
     )
 
-    # Remove internal score before returning
+    # Remove internal scoring field
     for recommendation in recommendations:
-        recommendation.pop("score")
+        recommendation.pop("_score")
 
     return recommendations
 
