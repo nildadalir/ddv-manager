@@ -308,6 +308,12 @@ class Player(Base):
         unique=True
     )
 
+    friendship_strategy: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        default="balanced",
+    )
+
     characters: Mapped[list["PlayerCharacter"]] = relationship(
         back_populates="player",
         cascade="all, delete-orphan"

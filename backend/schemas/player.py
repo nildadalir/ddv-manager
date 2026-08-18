@@ -39,3 +39,6 @@ class PlayerRecommendationResponse(BaseModel):
     priority: str
     character: str | None = None
     reason: str
+    
+class PlayerPreferenceUpdate(BaseModel):
+    friendship_strategy: str
