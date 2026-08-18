@@ -47,3 +47,11 @@ __pycache__/
 .env.*
 
 DDV_MANAGER_COMMANDS.md
+
+# DDV imported data
+database/raw/*
+database/processed/*
+
+# keep folder structure
+!database/raw/.gitkeep
+!database/processed/.gitkeep
