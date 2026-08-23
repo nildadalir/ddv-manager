@@ -41,6 +41,86 @@ class Franchise(Base):
         back_populates="franchise"
     )
 
+class Expansion(Base):
+    __tablename__ = "expansions"
+
+    expansion_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
+    is_base_game: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    regions: Mapped[list["Region"]] = relationship(
+        back_populates="expansion"
+    )
+    
+class Region(Base):
+    __tablename__ = "regions"
+
+    region_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    expansion_id: Mapped[int] = mapped_column(
+        ForeignKey("expansions.expansion_id"),
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
+    region_type: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    parent_region_id: Mapped[int | None] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=True
+    )
+
+    expansion: Mapped["Expansion"] = relationship(
+        back_populates="regions"
+    )
+
+    parent_region: Mapped["Region | None"] = relationship(
+        remote_side="Region.region_id",
+        back_populates="child_regions"
+    )
+
+    child_regions: Mapped[list["Region"]] = relationship(
+        back_populates="parent_region"
+    )
+
+    player_progress: Mapped[list["PlayerRegion"]] = relationship(
+        back_populates="region"
+    )
 
 class Character(Base):
     __tablename__ = "characters"
@@ -293,6 +373,161 @@ class DataSource(Base):
 
     last_sync: Mapped[str | None]
 
+class Expansion(Base):
+    __tablename__ = "expansions"
+
+    expansion_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
+    is_base_game: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    regions: Mapped[list["Region"]] = relationship(
+        back_populates="expansion"
+    )
+    
+    class Region(Base):
+        __tablename__ = "regions"
+
+    region_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    expansion_id: Mapped[int] = mapped_column(
+        ForeignKey("expansions.expansion_id"),
+        nullable=False
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True
+    )
+
+    region_type: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    parent_region_id: Mapped[int | None] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=True
+    )
+
+    expansion: Mapped["Expansion"] = relationship(
+        back_populates="regions"
+    )
+
+    player_progress: Mapped[list["PlayerRegion"]] = relationship(
+        back_populates="region"
+    )
+
+    parent_region: Mapped["Region | None"] = relationship(
+        remote_side="Region.region_id"
+    )
+    
+    class PlayerRegion(Base):
+        __tablename__ = "player_regions"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "region_id",
+            name="uq_player_region"
+        ),
+    )
+
+    player_region_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    player_id: Mapped[int] = mapped_column(
+        ForeignKey("players.player_id"),
+        nullable=False
+    )
+
+    region_id: Mapped[int] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=False
+    )
+
+    unlocked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    player: Mapped["Player"] = relationship(
+        back_populates="region_progress"
+    )
+
+    region: Mapped["Region"] = relationship(
+        back_populates="player_progress"
+    )
+    
+class PlayerRegion(Base):
+    __tablename__ = "player_regions"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "region_id",
+            name="uq_player_region"
+        ),
+    )
+
+    player_region_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True
+    )
+
+    player_id: Mapped[int] = mapped_column(
+        ForeignKey("players.player_id"),
+        nullable=False
+    )
+
+    region_id: Mapped[int] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=False
+    )
+
+    unlocked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    player: Mapped["Player"] = relationship(
+        back_populates="regions"
+    )
+
+    region: Mapped["Region"] = relationship(
+        back_populates="player_progress"
+    )
 
 class Player(Base):
     __tablename__ = "players"
@@ -320,6 +555,11 @@ class Player(Base):
     )
 
     role_preferences: Mapped[list["PlayerRolePreference"]] = relationship(
+        back_populates="player",
+        cascade="all, delete-orphan"
+    )
+
+    regions: Mapped[list["PlayerRegion"]] = relationship(
         back_populates="player",
         cascade="all, delete-orphan"
     )
