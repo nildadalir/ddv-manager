@@ -17,153 +17,174 @@ class Base(DeclarativeBase):
     pass
 
 
+# ==================================================
+# GAME DATA
+# ==================================================
+
 class Franchise(Base):
     __tablename__ = "franchises"
 
     franchise_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     characters: Mapped[list["Character"]] = relationship(
-        back_populates="franchise"
+        back_populates="franchise",
     )
+
 
 class Expansion(Base):
     __tablename__ = "expansions"
 
     expansion_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     is_base_game: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
-        default=False
+        default=False,
     )
 
     regions: Mapped[list["Region"]] = relationship(
-        back_populates="expansion"
+        back_populates="expansion",
     )
-    
+
+
 class Region(Base):
     __tablename__ = "regions"
 
     region_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     expansion_id: Mapped[int] = mapped_column(
         ForeignKey("expansions.expansion_id"),
-        nullable=False
+        nullable=False,
     )
 
     name: Mapped[str] = mapped_column(
         String,
-        nullable=False
+        nullable=False,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     region_type: Mapped[str] = mapped_column(
         String,
-        nullable=False
+        nullable=False,
     )
 
     parent_region_id: Mapped[int | None] = mapped_column(
         ForeignKey("regions.region_id"),
-        nullable=True
+        nullable=True,
     )
 
     expansion: Mapped["Expansion"] = relationship(
-        back_populates="regions"
+        back_populates="regions",
     )
 
     parent_region: Mapped["Region | None"] = relationship(
         remote_side="Region.region_id",
-        back_populates="child_regions"
+        back_populates="child_regions",
     )
 
     child_regions: Mapped[list["Region"]] = relationship(
-        back_populates="parent_region"
+        back_populates="parent_region",
+    )
+
+    characters: Mapped[list["Character"]] = relationship(
+        back_populates="region",
     )
 
     player_progress: Mapped[list["PlayerRegion"]] = relationship(
-        back_populates="region"
+        back_populates="region",
     )
+
 
 class Character(Base):
     __tablename__ = "characters"
 
     character_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     franchise_id: Mapped[int | None] = mapped_column(
-        ForeignKey("franchises.franchise_id")
+        ForeignKey("franchises.franchise_id"),
+        nullable=True,
+    )
+
+    region_id: Mapped[int | None] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=True,
     )
 
     species: Mapped[str | None]
 
     is_assignable: Mapped[bool] = mapped_column(
         Boolean,
-        default=False
+        default=False,
     )
 
     max_friendship_level: Mapped[int] = mapped_column(
         Integer,
-        default=10
+        default=10,
     )
 
     franchise: Mapped["Franchise | None"] = relationship(
-        back_populates="characters"
+        back_populates="characters",
+    )
+
+    region: Mapped["Region | None"] = relationship(
+        back_populates="characters",
     )
 
     player_progress: Mapped[list["PlayerCharacter"]] = relationship(
-        back_populates="character"
+        back_populates="character",
     )
 
 
@@ -172,30 +193,31 @@ class Role(Base):
 
     role_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     player_characters: Mapped[list["PlayerCharacter"]] = relationship(
-        back_populates="role"
+        back_populates="role",
     )
 
     player_preferences: Mapped[list["PlayerRolePreference"]] = relationship(
         back_populates="role",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
-    
+
+
 class PlayerRolePreference(Base):
     __tablename__ = "player_role_preferences"
 
@@ -203,56 +225,60 @@ class PlayerRolePreference(Base):
         UniqueConstraint(
             "player_id",
             "role_id",
-            name="uq_player_role_preference"
+            name="uq_player_role_preference",
         ),
     )
 
     preference_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     player_id: Mapped[int] = mapped_column(
         ForeignKey("players.player_id"),
-        nullable=False
+        nullable=False,
     )
 
     role_id: Mapped[int] = mapped_column(
         ForeignKey("roles.role_id"),
-        nullable=False
+        nullable=False,
     )
 
     priority: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
-        default=0
+        default=0,
     )
 
     player: Mapped["Player"] = relationship(
-        back_populates="role_preferences"
+        back_populates="role_preferences",
     )
 
     role: Mapped["Role"] = relationship(
-        back_populates="player_preferences"
+        back_populates="player_preferences",
     )
 
+
+# ==================================================
+# ITEMS
+# ==================================================
 
 class ItemCategory(Base):
     __tablename__ = "item_categories"
 
     category_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     items: Mapped[list["Item"]] = relationship(
-        back_populates="category"
+        back_populates="category",
     )
 
 
@@ -261,23 +287,24 @@ class Item(Base):
 
     item_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     category_id: Mapped[int | None] = mapped_column(
-        ForeignKey("item_categories.category_id")
+        ForeignKey("item_categories.category_id"),
+        nullable=True,
     )
 
     rarity: Mapped[str | None]
@@ -287,32 +314,36 @@ class Item(Base):
     energy: Mapped[int | None]
 
     category: Mapped["ItemCategory | None"] = relationship(
-        back_populates="items"
+        back_populates="items",
     )
 
     recipe_links: Mapped[list["RecipeIngredient"]] = relationship(
-        back_populates="item"
+        back_populates="item",
     )
 
+
+# ==================================================
+# RECIPES
+# ==================================================
 
 class Recipe(Base):
     __tablename__ = "recipes"
 
     recipe_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     external_id: Mapped[str | None] = mapped_column(
         String,
         unique=True,
-        nullable=True
+        nullable=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     category: Mapped[str | None]
@@ -324,7 +355,7 @@ class Recipe(Base):
     sell_price: Mapped[int | None]
 
     ingredients: Mapped[list["RecipeIngredient"]] = relationship(
-        back_populates="recipe"
+        back_populates="recipe",
     )
 
 
@@ -333,214 +364,67 @@ class RecipeIngredient(Base):
 
     recipe_id: Mapped[int] = mapped_column(
         ForeignKey("recipes.recipe_id"),
-        primary_key=True
+        primary_key=True,
     )
 
     item_id: Mapped[int] = mapped_column(
         ForeignKey("items.item_id"),
-        primary_key=True
+        primary_key=True,
     )
 
     quantity: Mapped[int] = mapped_column(
         Integer,
-        default=1
+        default=1,
     )
 
     recipe: Mapped["Recipe"] = relationship(
-        back_populates="ingredients"
+        back_populates="ingredients",
     )
 
     item: Mapped["Item"] = relationship(
-        back_populates="recipe_links"
+        back_populates="recipe_links",
     )
 
+
+# ==================================================
+# DATA SOURCES
+# ==================================================
 
 class DataSource(Base):
     __tablename__ = "data_sources"
 
     source_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     name: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     url: Mapped[str | None]
 
     last_sync: Mapped[str | None]
 
-class Expansion(Base):
-    __tablename__ = "expansions"
 
-    expansion_id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
-
-    name: Mapped[str] = mapped_column(
-        String,
-        nullable=False,
-        unique=True
-    )
-
-    external_id: Mapped[str | None] = mapped_column(
-        String,
-        unique=True,
-        nullable=True
-    )
-
-    is_base_game: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False
-    )
-
-    regions: Mapped[list["Region"]] = relationship(
-        back_populates="expansion"
-    )
-    
-    class Region(Base):
-        __tablename__ = "regions"
-
-    region_id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
-
-    expansion_id: Mapped[int] = mapped_column(
-        ForeignKey("expansions.expansion_id"),
-        nullable=False
-    )
-
-    name: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
-
-    external_id: Mapped[str | None] = mapped_column(
-        String,
-        unique=True,
-        nullable=True
-    )
-
-    region_type: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
-
-    parent_region_id: Mapped[int | None] = mapped_column(
-        ForeignKey("regions.region_id"),
-        nullable=True
-    )
-
-    expansion: Mapped["Expansion"] = relationship(
-        back_populates="regions"
-    )
-
-    player_progress: Mapped[list["PlayerRegion"]] = relationship(
-        back_populates="region"
-    )
-
-    parent_region: Mapped["Region | None"] = relationship(
-        remote_side="Region.region_id"
-    )
-    
-    class PlayerRegion(Base):
-        __tablename__ = "player_regions"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "player_id",
-            "region_id",
-            name="uq_player_region"
-        ),
-    )
-
-    player_region_id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
-
-    player_id: Mapped[int] = mapped_column(
-        ForeignKey("players.player_id"),
-        nullable=False
-    )
-
-    region_id: Mapped[int] = mapped_column(
-        ForeignKey("regions.region_id"),
-        nullable=False
-    )
-
-    unlocked: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False
-    )
-
-    player: Mapped["Player"] = relationship(
-        back_populates="region_progress"
-    )
-
-    region: Mapped["Region"] = relationship(
-        back_populates="player_progress"
-    )
-    
-class PlayerRegion(Base):
-    __tablename__ = "player_regions"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "player_id",
-            "region_id",
-            name="uq_player_region"
-        ),
-    )
-
-    player_region_id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True
-    )
-
-    player_id: Mapped[int] = mapped_column(
-        ForeignKey("players.player_id"),
-        nullable=False
-    )
-
-    region_id: Mapped[int] = mapped_column(
-        ForeignKey("regions.region_id"),
-        nullable=False
-    )
-
-    unlocked: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False
-    )
-
-    player: Mapped["Player"] = relationship(
-        back_populates="regions"
-    )
-
-    region: Mapped["Region"] = relationship(
-        back_populates="player_progress"
-    )
+# ==================================================
+# PLAYER
+# ==================================================
 
 class Player(Base):
     __tablename__ = "players"
 
     player_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     username: Mapped[str] = mapped_column(
         String,
         nullable=False,
-        unique=True
+        unique=True,
     )
 
     friendship_strategy: Mapped[str] = mapped_column(
@@ -551,60 +435,110 @@ class Player(Base):
 
     characters: Mapped[list["PlayerCharacter"]] = relationship(
         back_populates="player",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     role_preferences: Mapped[list["PlayerRolePreference"]] = relationship(
         back_populates="player",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
 
     regions: Mapped[list["PlayerRegion"]] = relationship(
         back_populates="player",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+    )
+
+
+class PlayerRegion(Base):
+    __tablename__ = "player_regions"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "region_id",
+            name="uq_player_region",
+        ),
+    )
+
+    player_region_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )
+
+    player_id: Mapped[int] = mapped_column(
+        ForeignKey("players.player_id"),
+        nullable=False,
+    )
+
+    region_id: Mapped[int] = mapped_column(
+        ForeignKey("regions.region_id"),
+        nullable=False,
+    )
+
+    unlocked: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+
+    player: Mapped["Player"] = relationship(
+        back_populates="regions",
+    )
+
+    region: Mapped["Region"] = relationship(
+        back_populates="player_progress",
     )
 
 
 class PlayerCharacter(Base):
     __tablename__ = "player_characters"
 
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "character_id",
+            name="uq_player_character",
+        ),
+    )
+
     player_character_id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
+        primary_key=True,
     )
 
     player_id: Mapped[int] = mapped_column(
         ForeignKey("players.player_id"),
-        nullable=False
+        nullable=False,
     )
 
     character_id: Mapped[int] = mapped_column(
         ForeignKey("characters.character_id"),
-        nullable=False
+        nullable=False,
     )
 
     unlocked: Mapped[bool] = mapped_column(
         Boolean,
-        default=False
+        default=False,
     )
 
     friendship_level: Mapped[int] = mapped_column(
         Integer,
-        default=0
+        default=0,
     )
 
     assigned_role: Mapped[int | None] = mapped_column(
-        ForeignKey("roles.role_id")
+        ForeignKey("roles.role_id"),
+        nullable=True,
     )
 
     player: Mapped["Player"] = relationship(
-        back_populates="characters"
+        back_populates="characters",
     )
 
     character: Mapped["Character"] = relationship(
-        back_populates="player_progress"
+        back_populates="player_progress",
     )
 
     role: Mapped["Role | None"] = relationship(
-        back_populates="player_characters"
+        back_populates="player_characters",
     )
