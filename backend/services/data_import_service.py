@@ -159,7 +159,6 @@ def import_expansions() -> None:
     finally:
         db.close()
 
-
 def import_regions() -> None:
     db: Session = SessionLocal()
 
@@ -167,7 +166,8 @@ def import_regions() -> None:
         raw_regions = load_regions()
 
         # First pass:
-        # create all regions without parent links.
+        # create or update all regions
+        # without parent links.
         for raw_region in raw_regions:
             if not validate_region(raw_region):
                 print(
@@ -202,9 +202,11 @@ def import_regions() -> None:
                 existing_region.name = (
                     region_data["name"]
                 )
+
                 existing_region.region_type = (
                     region_data["region_type"]
                 )
+
                 existing_region.expansion_id = (
                     expansion.expansion_id
                 )
@@ -239,12 +241,28 @@ def import_regions() -> None:
 
             region_name = raw_region["name"]
 
+            region_external_id = (
+                region_name.strip()
+                .lower()
+                .replace(" ", "_")
+                .replace("'", "")
+            )
+
+            parent_external_id = (
+                parent_name.strip()
+                .lower()
+                .replace(" ", "_")
+                .replace("'", "")
+            )
+
             region = db.query(Region).filter(
-                Region.name == region_name
+                Region.external_id
+                == region_external_id
             ).first()
 
             parent_region = db.query(Region).filter(
-                Region.name == parent_name
+                Region.external_id
+                == parent_external_id
             ).first()
 
             if region and parent_region:
@@ -260,7 +278,6 @@ def import_regions() -> None:
 
     finally:
         db.close()
-
 
 def import_world_data() -> None:
     import_expansions()
