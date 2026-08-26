@@ -1,27 +1,25 @@
-REQUIRED_FIELDS = (
-    "name",
-    "franchise",
-)
+def validate_character(character: dict) -> bool:
+    required_fields = [
+        "name",
+        "franchise",
+        "region",
+    ]
 
+    for field in required_fields:
+        value = character.get(field)
 
-def validate_character(data: dict) -> bool:
-    for field in REQUIRED_FIELDS:
-        if field not in data:
+        if not isinstance(value, str):
             return False
 
-        if not isinstance(data[field], str):
+        if not value.strip():
             return False
 
-        if not data[field].strip():
-            return False
+    species = character.get("species")
 
-    if "species" in data:
-        species = data["species"]
-
-        if species is not None and not isinstance(
-            species,
-            str,
-        ):
-            return False
+    if species is not None and not isinstance(
+        species,
+        str,
+    ):
+        return False
 
     return True

@@ -1,14 +1,22 @@
-def transform_character(data: dict) -> dict:
+def transform_character(character: dict) -> dict:
+    name = character["name"].strip()
+
     return {
-        "name": data["name"].strip(),
-        "franchise": data["franchise"].strip(),
+        "name": name,
+        "franchise": character["franchise"].strip(),
         "species": (
-            data.get("species").strip()
-            if data.get("species")
+            character["species"].strip()
+            if character.get("species")
             else None
         ),
-        "external_id": data["name"]
-            .strip()
-            .lower()
-            .replace(" ", "_"),
+        "region": (
+            character["region"].strip()
+            if character.get("region")
+            else None
+        ),
+        "external_id": (
+            name.lower()
+            .replace(" ", "_")
+            .replace("'", "")
+        ),
     }

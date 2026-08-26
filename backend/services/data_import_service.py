@@ -60,6 +60,10 @@ def import_characters() -> None:
             franchise_name = character_data.pop(
                 "franchise"
             )
+            
+            region_name = character_data.pop(
+                "region"
+            )
 
             franchise = db.query(Franchise).filter(
                 Franchise.name == franchise_name
@@ -77,6 +81,19 @@ def import_characters() -> None:
                 db.add(franchise)
                 db.flush()
 
+            
+            region = db.query(Region).filter(
+    Region.name == region_name
+).first()
+
+            if not region:
+                print(
+                    f"Skipping character because region "
+                    f"was not found: "
+                    f"{character_data['name']}"
+                )
+                continue
+            
             existing_character = db.query(Character).filter(
                 Character.external_id
                 == character_data["external_id"]
@@ -94,11 +111,16 @@ def import_characters() -> None:
                     franchise.franchise_id
                 )
 
+                existing_character.region_id = (
+                    region.region_id
+                )
+
             else:
                 db.add(
                     Character(
                         **character_data,
                         franchise_id=franchise.franchise_id,
+                        region_id=region.region_id,
                     )
                 )
 
