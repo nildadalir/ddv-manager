@@ -1,7 +1,4 @@
-from backend.database.models import (
-    Character,
-    PlayerRolePreference,
-)
+from backend.database.models import Character
 
 
 def generate_player_recommendations(
@@ -12,7 +9,7 @@ def generate_player_recommendations(
     recommendations = []
 
     # ==================================================
-    # WORLD ACCESS
+    # PLAYER WORLD ACCESS
     # ==================================================
 
     unlocked_region_ids = {
@@ -33,6 +30,13 @@ def generate_player_recommendations(
 
     # ==================================================
     # FRIENDSHIP RECOMMENDATIONS
+    #
+    # Only characters already unlocked by the player
+    # are considered here.
+    #
+    # We do NOT filter these by region because if the
+    # player already owns/unlocked the character,
+    # their friendship progress is actionable.
     # ==================================================
 
     for player_character in player.characters:
@@ -42,13 +46,13 @@ def generate_player_recommendations(
 
         character = player_character.character
 
+        if character.max_friendship_level <= 0:
+            continue
+
         if (
             player_character.friendship_level
             >= character.max_friendship_level
         ):
-            continue
-
-        if character.max_friendship_level <= 0:
             continue
 
         completion_percentage = (
@@ -58,8 +62,10 @@ def generate_player_recommendations(
 
         if completion_percentage >= 0.8:
             priority = "high"
+
         elif completion_percentage >= 0.4:
             priority = "medium"
+
         else:
             priority = "low"
 
@@ -82,28 +88,19 @@ def generate_player_recommendations(
         )
 
     # ==================================================
-    # ROLE PREFERENCES
-    # ==================================================
-
-    role_preferences = db.query(
-        PlayerRolePreference
-    ).filter(
-        PlayerRolePreference.player_id == player_id
-    ).all()
-
-    role_priority_map = {
-        preference.role_id: preference.priority
-        for preference in role_preferences
-    }
-
-    # ==================================================
     # ACCESSIBLE CHARACTER DISCOVERY
     #
-    # Find characters whose region is unlocked by
-    # the player but who are not yet unlocked.
+    # Characters can appear here when:
+    #
+    # - their region is unlocked
+    # - the player has not unlocked them yet
+    #
+    # This is separate from friendship recommendations.
     # ==================================================
 
-    for character in db.query(Character).all():
+    characters = db.query(Character).all()
+
+    for character in characters:
 
         if character.character_id in unlocked_character_ids:
             continue
@@ -113,14 +110,6 @@ def generate_player_recommendations(
 
         if character.region_id not in unlocked_region_ids:
             continue
-
-        # --------------------------------------------------
-        # Character is accessible to the player.
-        #
-        # We deliberately don't assign a role-based
-        # recommendation here. Roles are preferences,
-        # not reasons to recommend a random character.
-        # --------------------------------------------------
 
         recommendations.append(
             {
@@ -136,7 +125,7 @@ def generate_player_recommendations(
         )
 
     # ==================================================
-    # SORT
+    # SORT RECOMMENDATIONS
     # ==================================================
 
     recommendations.sort(
@@ -144,6 +133,7 @@ def generate_player_recommendations(
         reverse=True,
     )
 
+    # Internal scores are only used for sorting.
     for recommendation in recommendations:
         recommendation.pop("_score")
 
