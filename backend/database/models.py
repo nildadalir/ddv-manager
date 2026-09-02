@@ -186,6 +186,11 @@ class Character(Base):
     player_progress: Mapped[list["PlayerCharacter"]] = relationship(
         back_populates="character",
     )
+    
+    unlock_sources: Mapped[list["CharacterUnlockSource"]] = relationship(
+        secondary="character_unlock_source_links",
+        back_populates="characters",
+    )
 
 
 class Role(Base):
@@ -541,4 +546,48 @@ class PlayerCharacter(Base):
 
     role: Mapped["Role | None"] = relationship(
         back_populates="player_characters",
+    )
+    
+class CharacterUnlockSource(Base):
+    __tablename__ = "character_unlock_sources"
+
+    unlock_source_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        unique=True,
+    )
+
+    source_type: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+    )
+
+    external_id: Mapped[str | None] = mapped_column(
+        String,
+        unique=True,
+        nullable=True,
+    )
+
+    characters: Mapped[list["Character"]] = relationship(
+        secondary="character_unlock_source_links",
+        back_populates="unlock_sources",
+    )
+
+
+class CharacterUnlockSourceLink(Base):
+    __tablename__ = "character_unlock_source_links"
+
+    character_id: Mapped[int] = mapped_column(
+        ForeignKey("characters.character_id"),
+        primary_key=True,
+    )
+
+    unlock_source_id: Mapped[int] = mapped_column(
+        ForeignKey("character_unlock_sources.unlock_source_id"),
+        primary_key=True,
     )
