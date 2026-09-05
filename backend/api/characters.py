@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.database.session import get_database
-from backend.database.models import Character, Franchise
+from backend.database.models import Character, Franchise, Player
 from backend.schemas.character import CharacterResponse
 
 
@@ -12,11 +12,32 @@ router = APIRouter(
 )
 
 
-def build_character_response(character: Character) -> CharacterResponse:
+def build_character_response(
+    character: Character,
+    player_character=None,
+) -> CharacterResponse:
+
+    if player_character is None:
+        return CharacterResponse(
+            name=character.name,
+            species=character.species,
+            franchise=character.franchise.name if character.franchise else None,
+            unlocked=None,
+            friendship_level=None,
+            role=None,
+        )
+
     return CharacterResponse(
         name=character.name,
         species=character.species,
         franchise=character.franchise.name if character.franchise else None,
+        unlocked=player_character.unlocked,
+        friendship_level=player_character.friendship_level,
+        role=(
+            player_character.role.name
+            if player_character.role
+            else None
+        ),
     )
 
 
@@ -30,8 +51,21 @@ def get_characters(
         .all()
     )
 
+    player = db.query(Player).first()
+
+    player_characters = {}
+
+    if player:
+        player_characters = {
+            player_character.character_id: player_character
+            for player_character in player.characters
+        }
+
     return [
-        build_character_response(character)
+        build_character_response(
+            character,
+            player_characters.get(character.character_id),
+        )
         for character in characters
     ]
 
@@ -45,7 +79,20 @@ def search_characters(
         Character.name.ilike(f"%{name}%")
     ).all()
 
+    player = db.query(Player).first()
+
+    player_characters = {}
+
+    if player:
+        player_characters = {
+            player_character.character_id: player_character
+            for player_character in player.characters
+        }
+
     return [
-        build_character_response(character)
+        build_character_response(
+            character,
+            player_characters.get(character.character_id),
+        )
         for character in characters
     ]
