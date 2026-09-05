@@ -14,3 +14,5 @@ class CharacterResponse(BaseModel):
     friendship_level: int | None
 
     role: str | None
+
+    role_status: str
