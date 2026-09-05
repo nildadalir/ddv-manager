@@ -126,7 +126,7 @@ def generate_player_insights(
 
     if (
         characters["unlocked"] > 0
-        and roles["unassigned"] > 0
+        and roles["no_role"] > 0
     ):
         insights.append(
             {
