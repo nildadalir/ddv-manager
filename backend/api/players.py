@@ -8,7 +8,6 @@ from backend.database.models import (
     PlayerCharacter,
     Character,
     Role,
-    PlayerRolePreference,
 )
 
 from backend.schemas.player import (
@@ -32,6 +31,13 @@ router = APIRouter(
 )
 
 
+ALLOWED_ROLE_STATUSES = {
+    "assigned",
+    "no_role",
+    "unknown",
+}
+
+
 @router.get("/", response_model=list[PlayerResponse])
 def get_players(
     db: Session = Depends(get_database),
@@ -46,7 +52,12 @@ def get_players(
                     name=pc.character.name,
                     unlocked=pc.unlocked,
                     friendship_level=pc.friendship_level,
-                    role=pc.role.name if pc.role else None,
+                    role=(
+                        pc.role.name
+                        if pc.role_status == "assigned" and pc.role
+                        else None
+                    ),
+                    role_status=pc.role_status,
                 )
                 for pc in player.characters
             ],
@@ -73,13 +84,18 @@ def get_player_summary(
     characters = player.characters
 
     unlocked_count = sum(
-        1 for pc in characters if pc.unlocked
+        1
+        for pc in characters
+        if pc.unlocked is True
     )
 
     max_friendship_count = sum(
         1
         for pc in characters
-        if pc.friendship_level >= pc.character.max_friendship_level
+        if (
+            pc.friendship_level is not None
+            and pc.friendship_level >= pc.character.max_friendship_level
+        )
     )
 
     assigned_roles = [
@@ -88,13 +104,13 @@ def get_player_summary(
             "role": pc.role.name,
         }
         for pc in characters
-        if pc.role
+        if pc.role_status == "assigned" and pc.role
     ]
 
     used_roles = {
         pc.role.name
         for pc in characters
-        if pc.role
+        if pc.role_status == "assigned" and pc.role
     }
 
     all_roles = db.query(Role).all()
@@ -113,6 +129,7 @@ def get_player_summary(
         assigned_roles=assigned_roles,
         missing_roles=missing_roles,
     )
+
 
 @router.get(
     "/{player_id}/recommendations",
@@ -137,6 +154,7 @@ def get_player_recommendations(
         player,
         db,
     )
+
 
 @router.patch("/{player_id}/preferences")
 def update_player_preferences(
@@ -181,6 +199,7 @@ def update_player_preferences(
         "friendship_strategy": player.friendship_strategy,
     }
 
+
 @router.post("/{player_id}/characters")
 def add_character(
     player_id: int,
@@ -218,22 +237,40 @@ def add_character(
             detail="Character already added to player",
         )
 
-    if data.friendship_level < 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Friendship level cannot be negative",
-        )
+    if data.friendship_level is not None:
 
-    if data.friendship_level > character.max_friendship_level:
+        if data.friendship_level < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Friendship level cannot be negative",
+            )
+
+        if data.friendship_level > character.max_friendship_level:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Friendship level cannot exceed "
+                    f"{character.max_friendship_level}"
+                ),
+            )
+
+    if data.role_status not in ALLOWED_ROLE_STATUSES:
         raise HTTPException(
             status_code=400,
             detail=(
-                f"Friendship level cannot exceed "
-                f"{character.max_friendship_level}"
+                "Invalid role status. "
+                "Allowed values: assigned, no_role, unknown"
             ),
         )
 
-    if data.role_id is not None:
+    if data.role_status == "assigned":
+
+        if data.role_id is None:
+            raise HTTPException(
+                status_code=400,
+                detail="An assigned role requires a role_id",
+            )
+
         role = db.query(Role).filter(
             Role.role_id == data.role_id
         ).first()
@@ -244,12 +281,24 @@ def add_character(
                 detail="Role not found",
             )
 
+    else:
+
+        if data.role_id is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "role_id must be null unless "
+                    "role_status is assigned"
+                ),
+            )
+
     player_character = PlayerCharacter(
         player_id=player_id,
         character_id=data.character_id,
         unlocked=data.unlocked,
         friendship_level=data.friendship_level,
         assigned_role=data.role_id,
+        role_status=data.role_status,
     )
 
     try:
@@ -296,7 +345,10 @@ def update_character(
                 detail="Friendship level cannot be negative",
             )
 
-        if data.friendship_level > player_character.character.max_friendship_level:
+        if (
+            data.friendship_level
+            > player_character.character.max_friendship_level
+        ):
             raise HTTPException(
                 status_code=400,
                 detail=(
@@ -310,18 +362,51 @@ def update_character(
     if data.unlocked is not None:
         player_character.unlocked = data.unlocked
 
-    if data.role_id is not None:
-        role = db.query(Role).filter(
-            Role.role_id == data.role_id
-        ).first()
+    if data.role_status is not None:
 
-        if not role:
+        if data.role_status not in ALLOWED_ROLE_STATUSES:
             raise HTTPException(
-                status_code=404,
-                detail="Role not found",
+                status_code=400,
+                detail=(
+                    "Invalid role status. "
+                    "Allowed values: assigned, no_role, unknown"
+                ),
             )
 
-        player_character.assigned_role = data.role_id
+        if data.role_status == "assigned":
+
+            if data.role_id is None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="An assigned role requires a role_id",
+                )
+
+            role = db.query(Role).filter(
+                Role.role_id == data.role_id
+            ).first()
+
+            if not role:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Role not found",
+                )
+
+            player_character.assigned_role = data.role_id
+
+        else:
+
+            if data.role_id is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "role_id must be null unless "
+                        "role_status is assigned"
+                    ),
+                )
+
+            player_character.assigned_role = None
+
+        player_character.role_status = data.role_status
 
     try:
         db.commit()
@@ -340,6 +425,7 @@ def update_character(
         "unlocked": player_character.unlocked,
         "friendship_level": player_character.friendship_level,
         "role_id": player_character.assigned_role,
+        "role_status": player_character.role_status,
     }
 
 

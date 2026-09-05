@@ -11,6 +11,8 @@ class PlayerCharacterResponse(BaseModel):
 
     role: str | None
 
+    role_status: str
+
 
 class PlayerResponse(BaseModel):
 
@@ -38,11 +40,13 @@ class PlayerCharacterCreate(BaseModel):
 
     character_id: int
 
-    unlocked: bool = True
+    unlocked: bool | None = None
 
-    friendship_level: int = 0
+    friendship_level: int | None = None
 
     role_id: int | None = None
+
+    role_status: str = "unknown"
 
 
 class PlayerCharacterUpdate(BaseModel):
@@ -53,6 +57,7 @@ class PlayerCharacterUpdate(BaseModel):
 
     role_id: int | None = None
 
+    role_status: str | None = None
 
 class PlayerRecommendationResponse(BaseModel):
 
