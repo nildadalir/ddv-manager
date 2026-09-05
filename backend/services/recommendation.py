@@ -8,26 +8,11 @@ def generate_player_recommendations(
 ):
     recommendations = []
 
-    # ==================================================
-    # PLAYER CHARACTER STATE
-    # ==================================================
-
     unlocked_character_ids = {
         player_character.character_id
         for player_character in player.characters
-        if player_character.unlocked
+        if player_character.unlocked is True
     }
-
-    # ==================================================
-    # PLAYER UNLOCK SOURCE STATE
-    #
-    # True  = confirmed unlocked
-    # False = confirmed locked
-    # None  = unknown
-    #
-    # Only confirmed unlocked sources can trigger a
-    # character unlock recommendation.
-    # ==================================================
 
     unlocked_unlock_source_ids = {
         progress.unlock_source_id
@@ -35,16 +20,12 @@ def generate_player_recommendations(
         if progress.unlocked is True
     }
 
-    # ==================================================
-    # FRIENDSHIP RECOMMENDATIONS
-    #
-    # Only characters already unlocked by the player
-    # are considered here.
-    # ==================================================
-
     for player_character in player.characters:
 
-        if not player_character.unlocked:
+        if player_character.unlocked is not True:
+            continue
+
+        if player_character.friendship_level is None:
             continue
 
         character = player_character.character
@@ -90,47 +71,21 @@ def generate_player_recommendations(
             }
         )
 
-    # ==================================================
-    # CHARACTER UNLOCK RECOMMENDATIONS
-    #
-    # We use the character's actual unlock source.
-    #
-    # We DO NOT use character.region_id here.
-    #
-    # Example:
-    #
-    # Aladdin
-    #   -> Aladdin Realm
-    #
-    # Jafar
-    #   -> Eternity Isle Storyline
-    #
-    # This prevents an unlocked Valley region from
-    # incorrectly making every character in that region
-    # appear available.
-    # ==================================================
-
     characters = db.query(Character).all()
 
     for character in characters:
 
-        # Already unlocked by the player
         if character.character_id in unlocked_character_ids:
             continue
 
-        # Get this character's actual unlock sources
         unlock_source_ids = {
             source.unlock_source_id
             for source in character.unlock_sources
         }
 
-        # No unlock source means we cannot safely determine
-        # whether this character can currently be unlocked.
         if not unlock_source_ids:
             continue
 
-        # Recommend the character only when at least one
-        # confirmed unlock source is unlocked.
         if unlock_source_ids.isdisjoint(
             unlocked_unlock_source_ids
         ):
@@ -151,16 +106,11 @@ def generate_player_recommendations(
             }
         )
 
-    # ==================================================
-    # SORT RECOMMENDATIONS
-    # ==================================================
-
     recommendations.sort(
         key=lambda recommendation: recommendation["_score"],
         reverse=True,
     )
 
-    # Internal scores are only used for sorting.
     for recommendation in recommendations:
         recommendation.pop("_score")
 
