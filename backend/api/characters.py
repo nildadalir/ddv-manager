@@ -25,6 +25,7 @@ def build_character_response(
             unlocked=None,
             friendship_level=None,
             role=None,
+            role_status="unknown",
         )
 
     return CharacterResponse(
@@ -35,10 +36,22 @@ def build_character_response(
         friendship_level=player_character.friendship_level,
         role=(
             player_character.role.name
-            if player_character.role
+            if player_character.role_status == "assigned"
+            and player_character.role
             else None
         ),
+        role_status=player_character.role_status,
     )
+
+
+def get_player_character_map(player: Player | None):
+    if player is None:
+        return {}
+
+    return {
+        player_character.character_id: player_character
+        for player_character in player.characters
+    }
 
 
 @router.get("/", response_model=list[CharacterResponse])
@@ -53,13 +66,7 @@ def get_characters(
 
     player = db.query(Player).first()
 
-    player_characters = {}
-
-    if player:
-        player_characters = {
-            player_character.character_id: player_character
-            for player_character in player.characters
-        }
+    player_characters = get_player_character_map(player)
 
     return [
         build_character_response(
@@ -81,13 +88,7 @@ def search_characters(
 
     player = db.query(Player).first()
 
-    player_characters = {}
-
-    if player:
-        player_characters = {
-            player_character.character_id: player_character
-            for player_character in player.characters
-        }
+    player_characters = get_player_character_map(player)
 
     return [
         build_character_response(
