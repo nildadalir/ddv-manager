@@ -1,17 +1,14 @@
-from backend.database.models import Player
-
-
-def calculate_player_metrics(player_id, player, db):
+def calculate_player_metrics(
+    player_id,
+    player,
+    db,
+):
     """
     Calculate derived metrics from the player's current state.
 
     This function does not modify the database.
     It only reads player state and returns derived data.
     """
-
-    # ==================================================
-    # CHARACTER METRICS
-    # ==================================================
 
     characters = player.characters
 
@@ -35,14 +32,6 @@ def calculate_player_metrics(player_id, player, db):
         if character.unlocked is None
     ]
 
-    unlocked_character_count = len(unlocked_characters)
-    locked_character_count = len(locked_characters)
-    unknown_character_count = len(unknown_characters)
-
-    # ==================================================
-    # FRIENDSHIP METRICS
-    # ==================================================
-
     friendship_levels = [
         character.friendship_level
         for character in unlocked_characters
@@ -54,8 +43,10 @@ def calculate_player_metrics(player_id, player, db):
     max_friendship_levels = sum(
         character.character.max_friendship_level
         for character in unlocked_characters
-        if character.character.max_friendship_level > 0
-        and character.friendship_level is not None
+        if (
+            character.character.max_friendship_level > 0
+            and character.friendship_level is not None
+        )
     )
 
     if max_friendship_levels > 0:
@@ -67,25 +58,23 @@ def calculate_player_metrics(player_id, player, db):
     else:
         friendship_completion_percentage = None
 
-    # ==================================================
-    # ROLE METRICS
-    # ==================================================
-
     assigned_roles = [
-    character
-    for character in unlocked_characters
-    if character.role is not None
-    ]
-
-    unassigned_roles = [
         character
         for character in unlocked_characters
-        if character.role is None
+        if character.role_status == "assigned"
     ]
 
-    # ==================================================
-    # UNLOCK SOURCE METRICS
-    # ==================================================
+    no_role_characters = [
+        character
+        for character in unlocked_characters
+        if character.role_status == "no_role"
+    ]
+
+    unknown_role_characters = [
+        character
+        for character in unlocked_characters
+        if character.role_status == "unknown"
+    ]
 
     unlock_sources = player.unlock_source_progress
 
@@ -107,16 +96,12 @@ def calculate_player_metrics(player_id, player, db):
         if source.unlocked is None
     ]
 
-    # ==================================================
-    # RETURN DERIVED DATA
-    # ==================================================
-
     return {
         "characters": {
             "total": total_characters,
-            "unlocked": unlocked_character_count,
-            "locked": locked_character_count,
-            "unknown": unknown_character_count,
+            "unlocked": len(unlocked_characters),
+            "locked": len(locked_characters),
+            "unknown": len(unknown_characters),
         },
         "friendship": {
             "total_levels": total_friendship_levels,
@@ -125,7 +110,8 @@ def calculate_player_metrics(player_id, player, db):
         },
         "roles": {
             "assigned": len(assigned_roles),
-            "unassigned": len(unassigned_roles),
+            "no_role": len(no_role_characters),
+            "unknown": len(unknown_role_characters),
         },
         "unlock_sources": {
             "total": len(unlock_sources),
