@@ -526,19 +526,27 @@ class PlayerCharacter(Base):
         nullable=False,
     )
 
-    unlocked: Mapped[bool] = mapped_column(
+    unlocked: Mapped[bool | None] = mapped_column(
         Boolean,
-        default=False,
+        nullable=True,
+        default=None,
     )
 
-    friendship_level: Mapped[int] = mapped_column(
+    friendship_level: Mapped[int | None] = mapped_column(
         Integer,
-        default=0,
+        nullable=True,
+        default=None,
     )
 
     assigned_role: Mapped[int | None] = mapped_column(
         ForeignKey("roles.role_id"),
         nullable=True,
+    )
+    
+    role_status: Mapped[str] = mapped_column(
+    String(20),
+    nullable=False,
+    default="unknown",
     )
 
     player: Mapped["Player"] = relationship(
