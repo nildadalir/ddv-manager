@@ -48,7 +48,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/home")
+    fetch("http://127.0.0.1:8000/home/")
       .then((response) => {
         if (!response.ok) {
           throw new Error("Failed to load Home data.");
