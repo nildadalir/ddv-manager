@@ -42,6 +42,7 @@ type Character = {
   unlocked: boolean | null;
   friendship_level: number | null;
   role: string | null;
+  role_status: "assigned" | "no_role" | "unknown";
 };
 
 type Page = "Home" | "Characters";
@@ -288,6 +289,18 @@ function CharactersPage() {
     character.name.toLowerCase().includes(search.toLowerCase()),
   );
 
+  function getRoleDisplay(character: Character) {
+    if (character.role_status === "assigned") {
+      return character.role ?? "Unknown";
+    }
+
+    if (character.role_status === "no_role") {
+      return "No Role";
+    }
+
+    return "Unknown";
+  }
+
   return (
     <main className="main">
       <header className="topbar">
@@ -368,7 +381,7 @@ function CharactersPage() {
                     </div>
 
                     <div>
-                      <strong>Role:</strong> {character.role ?? "None"}
+                      <strong>Role:</strong> {getRoleDisplay(character)}
                     </div>
                   </div>
                 </div>
