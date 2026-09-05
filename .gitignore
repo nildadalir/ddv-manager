@@ -46,8 +46,6 @@ __pycache__/
 .env
 .env.*
 
-DDV_MANAGER_COMMANDS.md
-
 # DDV imported data
 database/raw/*
 database/processed/*
