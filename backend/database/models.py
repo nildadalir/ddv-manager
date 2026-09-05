@@ -452,6 +452,11 @@ class Player(Base):
         back_populates="player",
         cascade="all, delete-orphan",
     )
+    
+    unlock_source_progress: Mapped[list["PlayerUnlockSource"]] = relationship(
+        back_populates="player",
+        cascade="all, delete-orphan",
+    )
 
 
 class PlayerRegion(Base):
@@ -577,7 +582,51 @@ class CharacterUnlockSource(Base):
         secondary="character_unlock_source_links",
         back_populates="unlock_sources",
     )
+    
+    player_progress: Mapped[list["PlayerUnlockSource"]] = relationship(
+        back_populates="unlock_source",
+        cascade="all, delete-orphan",
+    )
 
+class PlayerUnlockSource(Base):
+    __tablename__ = "player_unlock_sources"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "player_id",
+            "unlock_source_id",
+            name="uq_player_unlock_source",
+        ),
+    )
+
+    player_unlock_source_id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+    )
+
+    player_id: Mapped[int] = mapped_column(
+        ForeignKey("players.player_id"),
+        nullable=False,
+    )
+
+    unlock_source_id: Mapped[int] = mapped_column(
+        ForeignKey("character_unlock_sources.unlock_source_id"),
+        nullable=False,
+    )
+
+    unlocked: Mapped[bool | None] = mapped_column(
+        Boolean,
+        nullable=True,
+        default=None,
+    )
+
+    player: Mapped["Player"] = relationship(
+        back_populates="unlock_source_progress"
+    )
+
+    unlock_source: Mapped["CharacterUnlockSource"] = relationship(
+        back_populates="player_progress"
+    )
 
 class CharacterUnlockSourceLink(Base):
     __tablename__ = "character_unlock_source_links"
