@@ -45,7 +45,22 @@ type Character = {
   role_status: "assigned" | "no_role" | "unknown";
 };
 
-type Page = "Home" | "Characters";
+type RoleCharacter = {
+  name: string;
+  friendship_level: number | null;
+  unlocked: boolean | null;
+};
+
+type ActivityRole = {
+  role_id: number;
+  role: string;
+  assigned_count: number;
+  assigned_characters: RoleCharacter[];
+  no_role_count: number;
+  unknown_count: number;
+};
+
+type Page = "Home" | "Characters" | "Activities & Roles";
 
 const navigation = [
   { label: "Home" as Page, icon: Home },
@@ -77,7 +92,11 @@ function App() {
               key={label}
               className={`nav-item ${page === label ? "active" : ""}`}
               onClick={() => {
-                if (label === "Home" || label === "Characters") {
+                if (
+                  label === "Home" ||
+                  label === "Characters" ||
+                  label === "Activities & Roles"
+                ) {
                   setPage(label);
                 }
               }}
@@ -100,6 +119,7 @@ function App() {
 
       {page === "Home" && <HomePage />}
       {page === "Characters" && <CharactersPage />}
+      {page === "Activities & Roles" && <ActivitiesRolesPage />}
     </div>
   );
 }
@@ -398,4 +418,115 @@ function CharactersPage() {
   );
 }
 
+function ActivitiesRolesPage() {
+  const [roles, setRoles] = useState<ActivityRole[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/players/1/activities-roles")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to load Activities & Roles.");
+        }
+
+        return response.json();
+      })
+      .then((data) => {
+        setRoles(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="main">
+        <h1>Activities & Roles</h1>
+        <div className="empty-state">Loading your activity assignments...</div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="main">
+        <h1>Activities & Roles</h1>
+        <div className="empty-state">
+          Unable to load Activities & Roles.
+          <br />
+          {error}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="main">
+      <header className="topbar">
+        <div>
+          <div className="eyebrow">YOUR VALLEY</div>
+          <h1>Activities & Roles</h1>
+        </div>
+
+        <div className="topbar-status">{roles.length} activities</div>
+      </header>
+
+      <section className="page-intro">
+        <div>
+          <p className="section-label">ACTIVITY COVERAGE</p>
+
+          <h2>How your companions are assigned</h2>
+
+          <p>
+            See which companions are supporting each activity in your valley.
+          </p>
+        </div>
+      </section>
+
+      <section className="role-grid">
+        {roles.map((role) => (
+          <article className="role-card" key={role.role_id}>
+            <div className="role-card-header">
+              <div>
+                <p className="section-label">ACTIVITY</p>
+                <h2>{role.role}</h2>
+              </div>
+
+              <div className="role-count">{role.assigned_count}</div>
+            </div>
+
+            {role.assigned_characters.length > 0 ? (
+              <div className="role-characters">
+                {role.assigned_characters.map((character) => (
+                  <div className="role-character" key={character.name}>
+                    <div className="character-avatar">
+                      {character.name.charAt(0)}
+                    </div>
+
+                    <div>
+                      <h3>{character.name}</h3>
+
+                      <p>
+                        Friendship{" "}
+                        {character.friendship_level !== null
+                          ? `${character.friendship_level}/10`
+                          : "Unknown"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="role-empty">No companions assigned</div>
+            )}
+          </article>
+        ))}
+      </section>
+    </main>
+  );
+}
 export default App;
